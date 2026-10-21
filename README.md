@@ -106,3 +106,73 @@ Algunas ideas para experimentar después:
 - Correr la suite en Chromium, Firefox y WebKit.
 - Probar el usuario `lento` sin esperas fijas.
 - Comparar los page objects que escribe el agente con el MCP de Playwright conectado y sin él.
+
+---
+
+## La suite de este fork
+
+La suite se escribió con Claude Code y prueba la tienda contra las [reglas de la
+tienda](#reglas-de-la-tienda) de este mismo README. Los defectos que encontró están
+en [DEFECTOS.md](DEFECTOS.md).
+
+### Cómo correrla
+
+```bash
+npm install
+npx playwright install
+npm test
+```
+
+`npm test` levanta la tienda con `serve` en http://localhost:4173, corre la suite en
+Chromium y deja el reporte HTML en `playwright-report/`. Para abrirlo:
+
+```bash
+npm run reporte
+```
+
+| Comando | Qué hace |
+|---|---|
+| `npm test` | Toda la suite en Chromium. |
+| `npm run test:todos-navegadores` | La suite en Chromium, Firefox y WebKit. |
+| `npm run test:ui` | El modo interactivo de Playwright. |
+| `npm run reporte` | Abre el último reporte HTML. |
+| `npm run tienda` | Solo levanta la tienda, sin correr pruebas. |
+
+### Cómo está organizada
+
+| Ruta | Qué es |
+|---|---|
+| `pruebas/especificacion/` | Las reglas del README escritas como código. `reglas.ts` es el oráculo de la suite: calcula descuento, envío y total según la especificación. `productos.ts` y `usuarios.ts` tienen las tablas de productos y de usuarios. |
+| `pruebas/paginas/` | Los page objects, una clase por página de la tienda, todas sobre `PaginaBase`. Los localizadores viven solo aquí. |
+| `pruebas/soporte/` | `Tienda.ts` compone los page objects en los recorridos que se repiten, y `fixtures.ts` los entrega a las pruebas. |
+| `pruebas/especificaciones/` | Las pruebas, un archivo por regla o grupo de reglas. |
+
+Ninguna prueba escribe un localizador: todas pasan por los page objects, y los
+`data-test` de la tienda solo aparecen en `pruebas/paginas/`.
+
+### Qué técnica de ISTQB se aplicó a cada regla
+
+Cada archivo de prueba empieza con un comentario que dice qué regla prueba y con qué
+técnica, y los casos de las tablas de decisión y de los valores límite están escritos
+como tabla en el propio comentario.
+
+| Archivo | Regla | Técnica de diseño |
+|---|---|---|
+| `01-ingreso.spec.ts` | Ingreso | Tabla de decisión (7 filas) y particiones de equivalencia |
+| `02-sesion.spec.ts` | Sesión | Transición de estados |
+| `03-catalogo.spec.ts` | Catálogo | Particiones de equivalencia y valor por defecto |
+| `04-carrito.spec.ts` | Carrito | Transición de estados y particiones de equivalencia |
+| `05-cantidad.spec.ts` | Cantidad | Análisis de valores límite sobre [1, 5] |
+| `06-datos-de-envio.spec.ts` | Datos de envío | Particiones de equivalencia y valores límite en la longitud del código postal |
+| `07-cupon.spec.ts` | Cupón | Particiones de equivalencia |
+| `08-descuento.spec.ts` | Descuento | Análisis de valores límite sobre Q200 y Q500 |
+| `09-envio.spec.ts` | Envío y Envío gratis | Tabla de decisión (7 filas) y valores límite sobre el umbral de Q300 |
+| `10-total-y-confirmacion.spec.ts` | Total y Confirmación | Particiones de equivalencia y transición de estados |
+| `11-usuario-problema.spec.ts` | Catálogo, Carrito y Datos de envío | Particiones de equivalencia sobre la clase de usuario |
+| `12-usuario-lento.spec.ts` | Ingreso | Particiones de equivalencia sobre la clase de usuario, con esperas por condición |
+
+### Resultado
+
+114 pruebas por navegador: 106 en verde y 8 en rojo. Las 8 en rojo son los 5 defectos
+de [DEFECTOS.md](DEFECTOS.md), y el mensaje de cada una dice qué regla se rompió. El
+resultado es el mismo en Chromium, Firefox y WebKit.
